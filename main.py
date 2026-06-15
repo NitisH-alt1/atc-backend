@@ -182,21 +182,49 @@ def _norm_opensky_state(state: list) -> Optional[dict]:
 # Data source fetchers
 # ─────────────────────────────────────────────────────────────────────────────
 async def fetch_airplanes_live() -> list[dict]:
-    """airplanes.live — free, no key, global ADS-B+MLAT."""
-    url = "https://api.airplanes.live/v2/point/51/10/250"
-    r = await _http_client.get(url)
-    r.raise_for_status()
-    data = r.json()
-    raw = data.get("ac") or data.get("aircraft") or []
+    """airplanes.live — free, no key. Queries multiple busy regions and merges results."""
+    points = [
+        (51, 10, 250),    # Western Europe
+        (45, 15, 250),    # Central/Southern Europe
+        (40, -74, 250),   # US Northeast
+        (34, -118, 250),  # US West Coast
+        (41, -87, 250),   # US Midwest
+        (35, 139, 250),   # Japan
+        (31, 121, 250),   # China East Coast
+        (1, 104, 250),    # Southeast Asia
+        (25, 55, 250),    # Middle East
+        (-34, 151, 250),  # Australia East Coast
+    ]
+
+    async def fetch_point(lat, lon, radius):
+        url = f"https://api.airplanes.live/v2/point/{lat}/{lon}/{radius}"
+        try:
+            r = await _http_client.get(url)
+            r.raise_for_status()
+            data = r.json()
+            return data.get("ac") or data.get("aircraft") or []
+        except Exception as e:
+            log.debug("airplanes.live point %s,%s failed: %s", lat, lon, e)
+            return []
+
+    raw_lists = await asyncio.gather(*(fetch_point(*p) for p in points))
+
+    seen = set()
     results = []
-    for ac in raw:
-        p = _norm_adsb_v2(ac)
-        if p:
-            p["source"] = "airplanes.live"
-            results.append(p)
-        if len(results) >= MAX_AIRCRAFT:
-            break
-    log.info("airplanes.live → %d aircraft", len(results))
+    for raw in raw_lists:
+        for ac in raw:
+            p = _norm_adsb_v2(ac)
+            if p:
+                icao = p.get("icao24")
+                if icao in seen:
+                    continue
+                seen.add(icao)
+                p["source"] = "airplanes.live"
+                results.append(p)
+                if len(results) >= MAX_AIRCRAFT:
+                    break
+
+    log.info("airplanes.live → %d aircraft (merged from %d regions)", len(results), len(points))
     return results
 
 
