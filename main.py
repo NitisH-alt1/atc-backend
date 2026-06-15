@@ -183,7 +183,7 @@ def _norm_opensky_state(state: list) -> Optional[dict]:
 # ─────────────────────────────────────────────────────────────────────────────
 async def fetch_airplanes_live() -> list[dict]:
     """airplanes.live — free, no key, global ADS-B+MLAT."""
-    url = "https://api.airplanes.live/v2/point/0/0/25001"
+    url = "https://api.airplanes.live/v2/point/51/10/250""
     r = await _http_client.get(url)
     r.raise_for_status()
     data = r.json()
