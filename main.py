@@ -317,10 +317,10 @@ async def fetch_opensky_route(callsign: str) -> Optional[dict]:
 # Master fetcher — tries sources in priority order
 # ─────────────────────────────────────────────────────────────────────────────
 SOURCE_PRIORITY = [
-    ("airplanes.live",   fetch_airplanes_live),
-    ("adsb.fi",          fetch_adsb_fi),
-    ("opensky-auth",     fetch_opensky_authenticated),
-    ("opensky-anon",     fetch_opensky_anonymous),
+    ("opensky-anon",      fetch_opensky_anonymous),
+    ("airplanes.live",    fetch_airplanes_live),
+    ("adsb.fi",           fetch_adsb_fi),
+    ("opensky-auth",      fetch_opensky_authenticated),
 ]
 
 
