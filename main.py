@@ -340,7 +340,7 @@ async def refresh_cache() -> None:
                 log.info("Cache refreshed from %s: %d aircraft", name, len(flights))
                 return
         except Exception as e:
-            log.warning("Source %s failed: %s", name, e)
+           log.warning("Source %s failed: %s: %r", name, type(e).__name__, e)
 
     log.error("All sources failed — cache not updated")
 
