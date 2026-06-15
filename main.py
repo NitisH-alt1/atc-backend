@@ -240,46 +240,48 @@ async def fetch_opensky_anonymous() -> list[dict]:
 
 async def fetch_opensky_authenticated() -> list[dict]:
     """
-    OpenSky with credentials via pyopensky — 5s resolution, higher rate limits.
-    Requires OPENSKY_USERNAME + OPENSKY_PASSWORD in .env
+    OpenSky with OAuth2 client-credentials auth — direct REST call, 5s resolution.
+    Requires OPENSKY_USERNAME (client_id) + OPENSKY_PASSWORD (client_secret) in env.
     """
-    if not PYOPENSKY_AVAILABLE:
-        raise RuntimeError("pyopensky not installed")
     if not OPENSKY_USERNAME or not OPENSKY_PASSWORD:
-        raise RuntimeError("No OpenSky credentials configured")
+        raise RuntimeError("No OpenSky OAuth2 credentials configured")
 
-    # pyopensky is synchronous — run in thread pool
-    loop = asyncio.get_event_loop()
+    token_url = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
-    def _blocking_fetch():
-        rest = OpenSkyREST()
-        df = rest.states()
-        if df is None or df.empty:
-            return []
-        records = []
-        for _, row in df.iterrows():
-            p = {
-                "icao24":   str(row.get("icao24", "")).lower(),
-                "callsign": str(row.get("callsign", "")).strip(),
-                "lat":      round(float(row.get("latitude",  0) or 0), 5),
-                "lon":      round(float(row.get("longitude", 0) or 0), 5),
-                "alt_ft":   int((float(row.get("baro_altitude", 0) or 0)) * 3.28084),
-                "gs_kts":   int((float(row.get("velocity", 0) or 0)) * 1.94384),
-                "heading":  round(float(row.get("true_track", 0) or 0), 1),
-                "squawk":   str(row.get("squawk", "2000") or "2000"),
-                "type":     "UNKN",
-                "on_ground": bool(row.get("on_ground", False)),
-                "source":   "opensky-auth",
-            }
-            if not p["on_ground"] and p["alt_ft"] >= 500 and p["lon"] and p["lat"]:
-                records.append(p)
-        return records
+    async with httpx.AsyncClient(timeout=20) as client:
+        token_resp = await client.post(
+            token_url,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": OPENSKY_USERNAME,
+                "client_secret": OPENSKY_PASSWORD,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        token_resp.raise_for_status()
+        access_token = token_resp.json().get("access_token")
+        if not access_token:
+            raise RuntimeError("OpenSky token response missing access_token")
 
-    results = await loop.run_in_executor(None, _blocking_fetch)
+        states_resp = await client.get(
+            "https://opensky-network.org/api/states/all",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        states_resp.raise_for_status()
+        data = states_resp.json()
+
+    states = data.get("states") or []
+    results = []
+    for state in states:
+        p = _norm_opensky_state(state)
+        if p:
+            p["source"] = "opensky-auth"
+            results.append(p)
+            if len(results) >= MAX_AIRCRAFT:
+                break
+
     log.info("opensky-auth → %d aircraft", len(results))
     return results
-
-
 async def fetch_opensky_route(callsign: str) -> Optional[dict]:
     """Fetch route info for a callsign via pyopensky REST."""
     if not PYOPENSKY_AVAILABLE:
