@@ -320,22 +320,23 @@ async def fetch_opensky_route(callsign: str) -> Optional[dict]:
 
     loop = asyncio.get_event_loop()
 
-   def _fetch():
+  def _fetch():
     try:
         rest = OpenSkyREST()
-        result = rest.routes(callsign=callsign)
 
-        if result is None:
+        flights = rest.get_flights_by_aircraft(callsign)
+
+        if flights is None:
             return None
 
-        if hasattr(result, "to_dict"):
-            result = result.iloc[0].to_dict() if len(result) else None
+        if hasattr(flights, "to_dict"):
+            flights = flights.iloc[0].to_dict() if len(flights) else None
 
-        if result:
+        if flights:
             return {
                 "callsign": callsign,
-                "origin": result.get("estDepartureAirport"),
-                "destination": result.get("estArrivalAirport")
+                "origin": flights.get("estDepartureAirport"),
+                "destination": flights.get("estArrivalAirport")
             }
 
         return None
