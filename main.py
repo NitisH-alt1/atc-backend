@@ -462,47 +462,50 @@ async def get_flight(icao24: str):
 @app.get("/api/route/{callsign}")
 async def get_route(callsign: str):
     """
-    Return route (origin → destination) for a callsign via pyopensky.
-    Cached for 1 hour.  Returns 503 if pyopensky is not available.
+    Return route (origin → destination).
     """
+
     if not PYOPENSKY_AVAILABLE:
-        raise HTTPException(status_code=503, detail="pyopensky not installed on this server")
+        raise HTTPException(
+            status_code=503,
+            detail="pyopensky not installed on this server"
+        )
 
-   callsign = callsign.upper().strip()
+    callsign = callsign.upper().strip()
 
-data = await fetch_opensky_route(callsign)
+    data = await fetch_opensky_route(callsign)
 
-# fallback if OpenSky route lookup fails
-if not data:
-    await refresh_cache()
+    # fallback if OpenSky route lookup fails
+    if not data:
+        await refresh_cache()
 
-    match = next(
-        (
-            f for f in _cache["flights"]
-            if f.get("callsign", "").strip().upper() == callsign
-        ),
-        None,
-    )
+        match = next(
+            (
+                f for f in _cache["flights"]
+                if f.get("callsign", "").strip().upper() == callsign
+            ),
+            None,
+        )
 
-  if match:
-    return {
-        "callsign": callsign,
-        "icao24": match.get("icao24"),
-        "lat": match.get("lat"),
-        "lon": match.get("lon"),
-        "alt_ft": match.get("alt_ft"),
-        "gs_kts": match.get("gs_kts"),
-        "heading": match.get("heading"),
-        "type": match.get("type"),
-        "source": "cache"
-    }
+        if match:
+            return {
+                "callsign": callsign,
+                "icao24": match.get("icao24"),
+                "lat": match.get("lat"),
+                "lon": match.get("lon"),
+                "alt_ft": match.get("alt_ft"),
+                "gs_kts": match.get("gs_kts"),
+                "heading": match.get("heading"),
+                "type": match.get("type"),
+                "source": "cache"
+            }
 
-    raise HTTPException(
-        status_code=404,
-        detail=f"No route data found for {callsign}"
-    )
+        raise HTTPException(
+            status_code=404,
+            detail=f"No route data found for {callsign}"
+        )
 
-return data
+    return data
 
 
 @app.get("/api/emergencies")
