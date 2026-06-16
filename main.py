@@ -322,24 +322,25 @@ async def fetch_opensky_route(callsign: str) -> Optional[dict]:
 
   def _fetch():
     try:
-        rest = OpenSkyREST()
+       rest = OpenSkyREST()
 
-        flights = rest.get_flights_by_aircraft(callsign)
+states = rest.get_states()
 
-        if flights is None:
-            return None
+if states is None:
+    return None
 
-        if hasattr(flights, "to_dict"):
-            flights = flights.iloc[0].to_dict() if len(flights) else None
+if hasattr(states, "to_dict"):
+    states = states.to_dict("records")
 
-        if flights:
-            return {
-                "callsign": callsign,
-                "origin": flights.get("estDepartureAirport"),
-                "destination": flights.get("estArrivalAirport")
-            }
+for aircraft in states:
+    if aircraft.get("callsign", "").strip() == callsign:
+        return {
+            "callsign": callsign,
+            "origin": aircraft.get("estDepartureAirport"),
+            "destination": aircraft.get("estArrivalAirport")
+        }
 
-        return None
+return None
 
     except Exception as e:
         log.debug("route fetch failed for %s: %s", callsign, e)
