@@ -498,14 +498,42 @@ async def get_stats():
 
     total = len(flights)
 
+    altitudes = [
+        f.get("alt_ft", 0)
+        for f in flights
+        if f.get("alt_ft")
+    ]
+
+    speeds = [
+        f.get("gs_kts", 0)
+        for f in flights
+        if f.get("gs_kts")
+    ]
+
+    aircraft_types = set(
+        f.get("type")
+        for f in flights
+        if f.get("type")
+    )
+
+    avg_altitude = (
+        round(sum(altitudes) / len(altitudes))
+        if altitudes else 0
+    )
+
+    avg_speed = (
+        round(sum(speeds) / len(speeds))
+        if speeds else 0
+    )
+
     return {
         "totalFlights": total,
         "liveFlights": total,
-        "departures": total // 2,
-        "arrivals": total // 2,
-        "avgAltitude": "34000 ft",
-        "avgSpeed": "470 kt",
-        "aircraftTypes": 45,
-        "busiestAirport": "LHR",
-        "busiestRoute": "JFK-LHR"
+        "departures": None,
+        "arrivals": None,
+        "avgAltitude": f"{avg_altitude} ft",
+        "avgSpeed": f"{avg_speed} kt",
+        "aircraftTypes": len(aircraft_types),
+        "busiestAirport": None,
+        "busiestRoute": None
     }
