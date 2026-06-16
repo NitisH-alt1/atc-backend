@@ -20,7 +20,7 @@
 
 (function () {
   // ── Config ──────────────────────────────────────────────────────────────────
-  const BACKEND_URL  = 'http://localhost:8000';  // change if hosted elsewhere
+  const BACKEND_URL = 'https://atc-backend-4unh.onrender.com';  // change if hosted elsewhere
   const POLL_MS      = 8000;  // how often to poll (ms) — matches backend TTL
   let   _pollTimer   = null;
   let   _connected   = false;
