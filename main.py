@@ -326,30 +326,23 @@ async def fetch_opensky_route(callsign: str) -> Optional[dict]:
     def _fetch():
         try:
             rest = OpenSkyREST()
-
             flights = rest.get_flights_by_callsign(callsign)
-
             if not flights:
                 return None
-
             flight = flights[0]
-
             return {
                 "callsign": callsign,
                 "origin": getattr(flight, "estDepartureAirport", None),
                 "destination": getattr(flight, "estArrivalAirport", None),
             }
-
         except Exception as e:
             log.debug("route fetch failed for %s: %s", callsign, e)
             return None
 
     data = await loop.run_in_executor(None, _fetch)
-
     if data:
         data["_ts"] = time.time()
         _route_cache[callsign] = data
-
     return data
 
 # ─────────────────────────────────────────────────────────────────────────────
