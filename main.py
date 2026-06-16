@@ -314,43 +314,43 @@ async def fetch_opensky_route(callsign: str) -> Optional[dict]:
     """Fetch route info for a callsign via pyopensky REST."""
     if not PYOPENSKY_AVAILABLE:
         return None
+
+    callsign = callsign.upper().strip()
+
     cached = _route_cache.get(callsign)
     if cached and time.time() - cached["_ts"] < 3600:
         return cached
 
     loop = asyncio.get_event_loop()
 
- def _fetch():
-    try:
-        rest = OpenSkyREST()
+    def _fetch():
+        try:
+            rest = OpenSkyREST()
 
-        flights = rest.get_flights_by_callsign(callsign)
+            flights = rest.get_flights_by_callsign(callsign)
 
-        if not flights:
+            if not flights:
+                return None
+
+            flight = flights[0]
+
+            return {
+                "callsign": callsign,
+                "origin": getattr(flight, "estDepartureAirport", None),
+                "destination": getattr(flight, "estArrivalAirport", None),
+            }
+
+        except Exception as e:
+            log.debug("route fetch failed for %s: %s", callsign, e)
             return None
 
-        flight = flights[0]
-
-        return {
-            "callsign": callsign,
-            "origin": getattr(flight, "estDepartureAirport", None),
-            "destination": getattr(flight, "estArrivalAirport", None)
-        }
-
-    except Exception as e:
-        log.debug("route fetch failed for %s: %s", callsign, e)
-        return None
-
-    except Exception as e:
-        log.debug("route fetch failed for %s: %s", callsign, e)
-        return None
-
     data = await loop.run_in_executor(None, _fetch)
+
     if data:
         data["_ts"] = time.time()
         _route_cache[callsign] = data
-    return data
 
+    return data
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Master fetcher — tries sources in priority order
