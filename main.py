@@ -381,20 +381,10 @@ async def refresh_cache() -> None:
 # API Routes
 # ─────────────────────────────────────────────────────────────────────────────
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 async def root():
-    return {
-        "service": "ATC Live Backend",
-        "version": "1.0.0",
-        "endpoints": {
-            "/api/flights":          "All live aircraft (normalised)",
-            "/api/flights/{icao24}": "Single aircraft by ICAO24 hex",
-            "/api/route/{callsign}": "Route info for a callsign (pyopensky)",
-            "/api/status":           "Server + cache health",
-            "/docs":                 "Swagger UI",
-        }
-    }
-
+    return {"status": "ok"}
+       
 
 @app.get("/api/flights")
 async def get_flights(
