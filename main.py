@@ -320,29 +320,29 @@ async def fetch_opensky_route(callsign: str) -> Optional[dict]:
 
     loop = asyncio.get_event_loop()
 
-    def _fetch():
-        try:
-           rest = OpenSkyREST()
-result = rest.routes(callsign=callsign)
+   def _fetch():
+    try:
+        rest = OpenSkyREST()
+        result = rest.routes(callsign=callsign)
 
-if result is None:
-    return None
-
-if hasattr(result, "to_dict"):
-    result = result.iloc[0].to_dict() if len(result) else None
-
-if result:
-    return {
-        "callsign": callsign,
-        "origin": result.get("estDepartureAirport"),
-        "destination": result.get("estArrivalAirport")
-    }
-
-return None
-            return result
-        except Exception as e:
-            log.debug("route fetch failed for %s: %s", callsign, e)
+        if result is None:
             return None
+
+        if hasattr(result, "to_dict"):
+            result = result.iloc[0].to_dict() if len(result) else None
+
+        if result:
+            return {
+                "callsign": callsign,
+                "origin": result.get("estDepartureAirport"),
+                "destination": result.get("estArrivalAirport")
+            }
+
+        return None
+
+    except Exception as e:
+        log.debug("route fetch failed for %s: %s", callsign, e)
+        return None
 
     data = await loop.run_in_executor(None, _fetch)
     if data:
